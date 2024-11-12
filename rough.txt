@@ -1,0 +1,2001 @@
+<!-- <form action="../Controllers/UserController.php?action=create" method="post">
+    <!-- Form fields here -->
+    <button type="submit" name="submit">Add User</button>
+</form>
+
+ -->
+
+
+ // second
+
+ 1. Model (app/Models/Admin.php)
+
+Define the admin credentials here:
+
+<?php
+class Admin {
+    const USERNAME = 'admin';
+    const PASSWORD = 'admin123';
+}
+
+2. Controller (app/Controllers/LoginController.php)
+
+The controller handles the login logic and redirects as needed.
+
+<?php
+require_once '../app/Models/Admin.php';
+
+class LoginController {
+    public function showLoginForm($error = null) {
+        require_once '../app/Views/login.php';
+    }
+
+    public function login() {
+        session_start();
+        
+        $username = $_POST['UserName'];
+        $password = $_POST['Password'];
+        $invalid = 0;
+
+        if ($username === Admin::USERNAME && $password === Admin::PASSWORD) {
+            $_SESSION['is_logged_in'] = true;
+            header('Location: ../app/Views/user_list.php');
+            exit();
+        } else {
+            $invalid = 1;
+            $this->showLoginForm($invalid);
+        }
+    }
+
+    public function logout() {
+        session_start();
+        session_unset();
+        session_destroy();
+        header('Location: ../public/index.php');
+    }
+}
+
+3. View (app/Views/login.php)
+
+This file holds the HTML structure for the login page.
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+    <title>Admin Login</title>
+</head>
+<body>
+
+<?php if (isset($error) && $error): ?>
+    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+        <strong>Error!</strong> Invalid admin credentials.
+        <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+            <span aria-hidden="true">&times;</span>
+        </button>
+    </div>
+<?php endif; ?>
+
+<div class="container">
+    <div class="form-container">
+        <h1 class="text-center">Admin Login</h1>
+        <form action="index.php?controller=login&action=login" method="POST" enctype="multipart/form-data" autocomplete="off">
+            <div class="form-group">
+                <label for="UserName">Admin Username</label>
+                <input type="text" class="form-control" placeholder="Enter admin username" id="UserName" name="UserName" required>
+            </div>
+
+            <div class="form-group">
+                <label for="Password">Password</label>
+                <input type="password" class="form-control" id="Password" name="Password" required>
+            </div>
+
+            <button type="submit" name="submit" class="btn btn-primary w-100">Login</button>
+        </form>
+    </div>
+</div>
+
+<script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@4.5.2/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
+
+4. Main Entry Point (public/index.php)
+
+
+<?php
+require_once '../app/Controllers/LoginController.php';
+
+$controllerName = $_GET['controller'] ?? 'login';
+$action = $_GET['action'] ?? 'showLoginForm';
+
+$controller = null;
+
+if ($controllerName === 'login') {
+    $controller = new LoginController();
+}
+
+if ($controller && method_exists($controller, $action)) {
+    $controller->$action();
+} else {
+    echo "404 - Page Not Found";
+}
+
+
+//Sample 3
+
+<table>
+    <?php foreach ($users as $user): ?>
+    <tr>
+        <td><?= htmlspecialchars($user['ID']); ?></td>
+        <td><?= htmlspecialchars($user['UserName']); ?></td>
+        <td><a href="../Controllers/UserController.php?action=delete&id=<?= $user['ID']; ?>">Delete</a></td>
+    </tr>
+    <?php endforeach; ?>
+</table>
+
+//sample 4
+
+if (isset($_GET['action']) && $_GET['action'] === 'delete') {
+    $controller = new UserController();
+    $controller->deleteUser($_GET['id']); // Pass only the id, not $_GET
+}
+
+
+
+public function deleteUser($id) {
+    $this->userModel->delete($id);
+    header('Location: ../Views/user_list.php');
+    exit;
+}
+
+
+3. User Model delete Method: Verify that your User model's delete method is set up to accept an integer ID and properly delete the record from the database. An example of the delete function in User.php might look like this:
+
+public function delete($id) {
+    $stmt = $this->db->prepare("DELETE FROM users WHERE ID = ?");
+    $stmt->bind_param("i", $id);
+    return $stmt->execute();
+}
+
+Ensure the table name (users in this example) matches your actual database schema.
+
+
+4. Ensure Redirect Works: After deleting the user, you should redirect to user_list.php immediately without printing anything else. The echo $id; in deleteUser after the header() call could interfere with the redirect, so remove it.
+
+The final deleteUser method should look like:
+
+public function deleteUser($id) {
+    $this->userModel->delete($id);
+    header('Location: ../Views/user_list.php');
+    exit;
+}
+
+//sample 5
+
+1. Session Error: The session_start() function is throwing a notice because a session is already active. To prevent this, you can check if a session has already started before calling session_start().
+
+
+2. Argument Count Error in editUser(): The editUser() function is expecting one argument ($id), but it's being called without any arguments in the following line:
+
+$controller->editUser();
+
+To fix this, you need to pass the $id parameter from the URL.
+
+
+
+Here’s the modified code:
+
+Updated UserController.php
+
+<?php
+
+require_once __DIR__ . '/../Models/User.php';
+
+$controller = new UserController();
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_GET['action']) && $_GET['action'] === 'create') {
+    $controller->createUser($_POST);
+}
+
+if (isset($_GET['action']) && $_GET['action'] === 'delete') {
+    $controller->deleteUser($_GET['id']);
+}
+
+if (isset($_GET['action']) && $_GET['action'] === 'edit' && isset($_GET['id'])) {
+    $controller->editUser($_GET['id']); // Pass the 'id' parameter here
+}
+
+class UserController {
+    private $userModel;
+
+    public function __construct() {
+        $this->userModel = new User();
+        if (session_status() == PHP_SESSION_NONE) {
+            session_start();
+        }
+    }
+
+    public function listUsers() {
+        $users = $this->userModel->readAll();
+        require_once '../app/Views/user_list.php';
+    }
+
+    public function createUser($userData) {
+        $this->userModel->create($userData['UserName'], $userData['Password']);
+        echo "User created successfully";
+        header('Location: ../Views/user_list.php');
+        exit();
+    }
+
+    public function editUser($id) {
+        $user = $this->userModel->find($id);
+        require_once '../app/Views/edit.php';
+    }
+
+    public function updateUser($id, $userData) {
+        $this->userModel->update($id, $userData['UserName'], $userData['Password']);
+        header('Location: ../Views/user_list.php');
+    }
+
+    public function deleteUser($id) {
+        $this->userModel->delete($id);
+        header('Location: ../Views/user_list.php');
+        exit;
+    }
+}
+
+//four
+
+1. Create the CSV Import Form on User_list1.php
+
+Here, we'll add a file input for uploading a CSV and a download link for a sample CSV file.
+
+<div class="container">
+    <!-- Existing content above -->
+
+    <!-- CSV Import Form -->
+    <h3>Import Users from CSV</h3>
+    <form action="../Controllers/User1Controller.php?action=importCsv" method="post" enctype="multipart/form-data">
+        <input type="file" name="csv_file" accept=".csv" required>
+        <button type="submit" class="btn">Upload CSV</button>
+    </form>
+
+    <a href="../public/sample.csv" class="btn">Download Sample CSV</a>
+
+    <!-- Existing User List Table and other content below -->
+</div>
+
+2. Create a Sample CSV File
+
+Create a sample.csv file in your public directory to provide a template for users. The structure should match the database columns. Here’s a sample structure for the CSV file:
+
+public/sample.csv
+
+ID,FirstName,LastName,RollNo
+1,John,Doe,1001
+2,Jane,Smith,1002
+3,Bob,Johnson,1003
+
+3. Handle the CSV Upload in the Controller (User1Controller.php)
+
+Add the importCsv action in your controller. This will handle the file upload, read its contents, and insert/update records in the database.
+
+// Controllers/User1Controller.php
+class User1Controller
+{
+    // Import CSV function
+    public function importCsv()
+    {
+        if (isset($_FILES['csv_file']) && $_FILES['csv_file']['error'] === UPLOAD_ERR_OK) {
+            $csvFile = $_FILES['csv_file']['tmp_name'];
+            $file = fopen($csvFile, 'r');
+
+            // Skip the header line
+            fgetcsv($file);
+
+            $userModel = new UserModel();
+
+            // Read each row in the CSV file
+            while (($row = fgetcsv($file, 1000, ",")) !== FALSE) {
+                $data = [
+                    'ID' => $row[0],
+                    'FirstName' => $row[1],
+                    'LastName' => $row[2],
+                    'RollNo' => $row[3],
+                ];
+
+                // Insert or update each row
+                $userModel->saveUserFromCsv($data);
+            }
+
+            fclose($file);
+            header("Location: ../Views/user_list1.php?message=CSV+imported+successfully");
+            exit();
+        } else {
+            echo "Failed to upload CSV file.";
+        }
+    }
+}
+
+4. Add a Function in the Model (UserModel.php) to Save Data
+
+In the UserModel.php file, create a method saveUserFromCsv to insert or update each record.
+
+// Models/UserModel.php
+class UserModel
+{
+    private $db;
+
+    public function __construct()
+    {
+        // Database connection (adjust according to your setup)
+        $this->db = Database::getConnection();
+    }
+
+    public function saveUserFromCsv($data)
+    {
+        // Check if user already exists by ID
+        $query = $this->db->prepare("SELECT * FROM users WHERE ID = :id");
+        $query->bindParam(':id', $data['ID']);
+        $query->execute();
+
+        if ($query->rowCount() > 0) {
+            // Update existing user
+            $update = $this->db->prepare("UPDATE users SET FirstName = :firstname, LastName = :lastname, RollNo = :rollno WHERE ID = :id");
+            $update->bindParam(':firstname', $data['FirstName']);
+            $update->bindParam(':lastname', $data['LastName']);
+            $update->bindParam(':rollno', $data['RollNo']);
+            $update->bindParam(':id', $data['ID']);
+            $update->execute();
+        } else {
+            // Insert new user
+            $insert = $this->db->prepare("INSERT INTO users (ID, FirstName, LastName, RollNo) VALUES (:id, :firstname, :lastname, :rollno)");
+            $insert->bindParam(':id', $data['ID']);
+            $insert->bindParam(':firstname', $data['FirstName']);
+            $insert->bindParam(':lastname', $data['LastName']);
+            $insert->bindParam(':rollno', $data['RollNo']);
+            $insert->execute();
+        }
+    }
+}
+
+5. Update Routes in index.php (or Main Controller Logic)
+
+Make sure that your index.php or main router can handle the importCsv action for User1Controller.
+
+// index.php or main routing logic
+if ($_GET['action'] === 'importCsv') {
+    $controller = new User1Controller();
+    $controller->importCsv();
+}
+
+
+
+// Fourth
+
+2024/11/08 13:19:19 [error] 847#847: *289 FastCGI sent in stderr: "PHP message: PHP Warning:  require_once(../app/Controllers/LoginController.php): Failed to open stream: No such file or directory in /var/www/html/MVC_PROJECTPRACTICE/index.php on line 4PHP message: PHP Fatal error:  Uncaught Error: Failed opening required '../app/Controllers/LoginController.php' (include_path='.:/usr/share/php') in /var/www/html/MVC_PROJECTPRACTICE/index.php:4
+Stack trace:
+#0 {main}
+  thrown in /var/www/html/MVC_PROJECTPRACTICE/index.php on line 4" while reading response header from upstream, client: 127.0.0.1, server: local.mvc_projectpractice.com, request: "GET / HTTP/1.1", upstream: "fastcgi://unix:/var/run/php/php8.1-fpm.sock:", host: "local.mvc_projectpractice.com"
+
+index.php
+
+<?php
+
+
+require_once '../app/Controllers/LoginController.php';
+// require_once __DIR__ . '/../Controllers/LoginController.php';
+
+
+$controllerName = $_GET['controller'] ?? 'login';
+$action = $_GET['action'] ?? 'showLoginForm';
+
+$controller = null;
+
+if ($controllerName === 'login') {
+    $controller = new LoginController();
+}
+
+if ($controller && method_exists($controller, $action)) {
+    $controller->$action();
+} else {
+    echo "404 - Page Not Found";
+}
+
+
+?>
+
+
+// Fifth
+
+
+User1Controller.php
+
+<?php
+
+// require_once '../app/Models/User1.php';
+require_once __DIR__ . '/../Models/User1.php';
+
+$controller = new User1Controller();
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_GET['action']) && $_GET['action'] === 'create1') {
+    $controller->createUser($_POST);
+}
+
+if (isset($_GET['action']) && $_GET['action'] === 'delete1') {
+    $controller->deleteUser($_GET['id']);
+}
+
+if (isset($_GET['action']) && $_GET['action'] === 'edit1') {
+ 
+    $controller->updateUser($_GET['id'],$_POST);
+}
+
+if (isset($_GET['action']) && $_GET['action'] === 'importCsv') {
+    // echo 'Hello';
+    // exit;
+    $controller->importCsv();
+}
+
+
+
+class User1Controller {
+    private $user1Model;
+
+    public function __construct() {
+        $this->user1Model = new User1();
+        session_start();
+    }
+
+    public function listUsers() {
+        // Redirect if not logged in
+        if (!isset($_SESSION['loggedin']) || $_SESSION['loggedin'] !== true) {
+            header('Location: ../public/login.php');
+            exit();
+        }
+
+        $search = $_GET['search'] ?? '';
+        $limit = 5;
+        $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
+        $offset = ($page - 1) * $limit;
+        
+        $total_users = $this->user1Model->countUsers($search);
+        $total_pages = ceil($total_users / $limit);
+        $users = $this->user1Model->fetchUsers($search, $limit, $offset);
+        
+        require_once '../app/Views/user_list1.php';
+    }
+
+    public function importCsv() {
+
+        // echo 'Hello';
+        // exit;
+
+        if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_FILES['csv_file'])) {
+            $file = $_FILES['csv_file'];
+
+            if ($file['error'] == 0) {
+                $fileName = $file['tmp_name'];
+                $handle = fopen($fileName, 'r');
+
+                // Skip the header row
+                fgetcsv($handle);
+
+                // Read and insert the data
+                while (($data = fgetcsv($handle)) !== false) {
+                    $firstName = $data[0];
+                    $lastName = $data[1];
+                    $rollNo = $data[2];
+
+                    // Call your model function to insert data
+                    $this->user1Model->create1($firstName, $lastName, $rollNo);
+                    header('Location: ../Views/user_list1.php');
+                     // Redirect to the user list page after upload
+                    // header('Location: ../app/Views/user_list1.php');
+                }
+
+                fclose($handle);
+
+                // Redirect to the user list page after upload
+                // header('Location: ../app/Views/user_list1.php');
+            } else {
+                echo "Error uploading the file.";
+            }
+        }
+    }
+
+    public function createUser($userData) {
+        $this->user1Model->create1($userData['FirstName'], $userData['LastName'], $userData['RollNo']);
+        header('Location: ../Views/user_list1.php');
+        // header('Location: ../app/Views/user_list1.php');
+    }
+
+    public function editUser($id) {
+        $user = $this->user1Model->find1($id);
+        require_once '../app/Views/edit1.php';
+    }
+
+    public function updateUser($id, $userData) {
+        $this->user1Model->update1($id, $userData['FirstName'], $userData['LastName'], $userData['RollNo']);
+        header('Location: ../Views/user_list1.php');
+        // header('Location: ../app/Views/user_list1.php');
+    }
+
+    public function deleteUser($id) {
+        $this->user1Model->delete1($id);
+        header('Location: ../Views/user_list1.php');
+    }
+}
+?>
+
+
+User1.php
+
+<?php
+// require_once 'config/Database1.php';
+require_once __DIR__ . '/../../config/Database.php';
+
+class User1 {
+    private $conn;
+
+    public function __construct() {
+        $db = new Database("MVCStudent");
+        $this->conn = $db->conn;
+    }
+
+    public function create1($firstName, $lastName, $rollNo) {
+        $stmt = $this->conn->prepare("INSERT INTO Student (FirstName, LastName, RollNo) VALUES (?, ?, ?)");
+        $stmt->bind_param("ssi", $firstName, $lastName, $rollNo);
+        return $stmt->execute();
+    }
+
+    public function delete1($id) {
+        $stmt = $this->conn->prepare("DELETE FROM Student WHERE ID = ?");
+        $stmt->bind_param("i", $id);
+        return $stmt->execute();
+    }
+
+    // Updated this method to return an array of users
+    public function readAll1() {
+        $result = $this->conn->query("SELECT * FROM Student");
+        return $result->fetch_all(MYSQLI_ASSOC); // returns an array
+    }
+
+    // Add countUsers method for pagination
+    public function countUsers($search = '') {
+        $search = "%" . $this->conn->real_escape_string($search) . "%"; // Sanitize search input
+        $stmt = $this->conn->prepare("SELECT COUNT(*) FROM Student WHERE FirstName LIKE ? OR LastName LIKE ?");
+        $stmt->bind_param("ss", $search, $search);
+        $stmt->execute();
+        $stmt->bind_result($count);
+        $stmt->fetch();
+        return $count; // returns the total number of users
+    }
+
+    // Add fetchUsers method for pagination with search
+    public function fetchUsers($search = '', $limit = 5, $offset = 0) {
+        $search = "%" . $this->conn->real_escape_string($search) . "%"; // Sanitize search input
+        $stmt = $this->conn->prepare("SELECT * FROM Student WHERE FirstName LIKE ? OR LastName LIKE ? LIMIT ? OFFSET ?");
+        $stmt->bind_param("ssii", $search, $search, $limit, $offset);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        return $result->fetch_all(MYSQLI_ASSOC); // returns an array of users
+    }
+
+    public function update1($id, $firstName, $lastName, $rollNo) {
+        $stmt = $this->conn->prepare("UPDATE Student SET FirstName = ?, LastName = ?, RollNo = ? WHERE ID = ?");
+        $stmt->bind_param("ssii", $firstName, $lastName, $rollNo, $id);
+        return $stmt->execute();
+    }
+
+    public function find1($id) {
+        $stmt = $this->conn->prepare("SELECT * FROM Student WHERE ID = ?");
+        $stmt->bind_param("i", $id);
+        $stmt->execute();
+        $user = $stmt->get_result()->fetch_assoc();
+        return $user;
+    }
+
+
+    public function rollNoExists($rollNo) {
+        // Fix: Access conn through $this->db
+        $stmt = $this->conn->prepare("SELECT * FROM Student WHERE RollNo = ?");
+        $stmt->bind_param('i', $rollNo);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        return $result->num_rows > 0; // Returns true if the mobile number exists
+    }
+}
+
+create1.php
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Create User</title>
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div class="container">
+    <div class="form-container">
+        <h2 class="text-center">Create New Student</h2>
+        <form action="../Controllers/User1Controller.php?action=create1" method="post" enctype="multipart/form-data" autocomplete="off">
+            <div class="form-group">
+                <label for="FirstName">FirstName</label>
+                <input type="text" class="form-control" id="FirstName" name="FirstName" required>
+                <div id="first-name-error" class="error-message"></div>
+            </div>
+
+
+
+            <div class="form-group">
+                <label for="LastName">LastName</label>
+                <input type="text" class="form-control" id="LastName" name="LastName" required>
+                <div id="last-name-error" class="error-message"></div>
+            </div>
+
+            <div class="form-group">
+                <label for="RollNo">RollNo</label>
+                <input type="text" class="form-control" id="RollNo" name="RollNo" required>
+                <div id="roll-no-error" class="error-message"></div>
+            </div>
+
+
+            <button type="submit" name="submit" class="btn btn-primary w-100">Add Student</button>
+
+          
+        </form>
+    </div>
+</div>
+
+<script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@4.5.2/dist/js/bootstrap.bundle.min.js"></script>
+<script src="script.js" defer></script>
+<!-- <script>
+    // Call validateImage on page load to check the image validation state
+    window.onload = validateImage;
+</script> -->
+</body>
+</html>
+
+
+user_list1.php
+
+<?php
+
+
+// Start the session
+session_start();
+require_once __DIR__ . '/../Models/User1.php';
+
+// Check if the user is logged in; if not, redirect to login
+if (!isset($_SESSION['logged_in']) || $_SESSION['logged_in'] !== true) {
+    header("Location: ../../public/login.php");
+    exit();
+}
+
+$userObj = new User1();
+
+// Handle search
+$search = '';
+if (isset($_GET['search'])) {
+    $search = $_GET['search'];
+}
+
+$limit = 5; 
+$page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
+$offset = ($page - 1) * $limit;
+
+$total_users = $userObj->countUsers($search);  // Total user count
+$total_pages = ceil($total_users / $limit);   // Total pages for pagination
+$users = $userObj->fetchUsers($search, $limit, $offset);  // Fetch the users based on search and pagination
+
+?>
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>User List</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <style>
+        /* General Styles */
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f7f8fa;
+            margin: 0;
+            padding: 40px;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background: #fff;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+        }
+
+        h2 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 20px;
+            font-size: 28px;
+        }
+
+        /* Header Buttons */
+        .header-buttons {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 20px;
+        }
+
+        .header-buttons a {
+            padding: 10px 20px;
+            background-color: #007bff;
+            color: white;
+            text-decoration: none;
+            border-radius: 4px;
+        }
+
+        .header-buttons a:hover {
+            background-color: #0056b3;
+        }
+
+        /* Search Box and Filters */
+        .search-container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+        }
+
+        .search-container input {
+            padding: 10px;
+            width: 70%;
+            border-radius: 4px;
+            border: 1px solid #ddd;
+            font-size: 16px;
+            margin-right: 10px;
+        }
+
+        .search-container button {
+            padding: 10px 15px;
+            background-color: #007bff;
+            color: #fff;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        .search-container button:hover {
+            background-color: #0056b3;
+        }
+
+        /* Table Styles */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+            font-size: 16px;
+        }
+
+        th {
+            background-color: #007bff;
+            color: white;
+        }
+
+        tr:hover {
+            background-color: #f1f1f1;
+        }
+
+        .actions-column {
+            text-align: center;
+        }
+
+        .action-link {
+            color: #007bff;
+            text-decoration: none;
+        }
+
+        .action-link:hover {
+            text-decoration: underline;
+        }
+
+        /* Pagination Styles */
+        .pagination {
+            text-align: center;
+            margin-top: 20px;
+        }
+
+        .pagination a {
+            padding: 8px 16px;
+            color: #007bff;
+            text-decoration: none;
+            margin: 0 5px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+
+        .pagination a:hover {
+            background-color: #007bff;
+            color: white;
+        }
+
+        /* CSV Upload Section */
+        .csv-upload {
+            margin-top: 40px;
+            text-align: center;
+        }
+
+        .csv-upload form {
+            display: inline-block;
+            margin-bottom: 20px;
+        }
+
+        .csv-upload input[type="file"] {
+            padding: 8px;
+            border-radius: 4px;
+            border: 1px solid #ddd;
+        }
+
+        .csv-upload button {
+            padding: 10px 20px;
+            background-color: #28a745;
+            color: #fff;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        .csv-upload button:hover {
+            background-color: #218838;
+        }
+
+        .csv-upload a {
+            font-size: 16px;
+            color: #007bff;
+            text-decoration: none;
+        }
+
+        .csv-upload a:hover {
+            text-decoration: underline;
+        }
+
+        /* Logout Button */
+        .logout-btn {
+            text-align: right;
+            margin-top: 20px;
+        }
+
+        .logout-btn button {
+            padding: 10px 20px;
+            background-color: #dc3545;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        .logout-btn button:hover {
+            background-color: #c82333;
+        }
+
+    </style>
+</head>
+<body>
+
+<div class="container">
+
+    <!-- Header Buttons (Create and Logout) -->
+    <div class="header-buttons">
+        <a href="create1.php">Create New Student</a>
+    </div>
+
+    <h2>Student List</h2>
+
+    <!-- Search and Filter -->
+    <div class="search-container">
+        <form method="GET" action="">
+            <input type="text" name="search" placeholder="Search by First Name or Last Name" value="<?php echo htmlspecialchars($search); ?>" autocomplete="off">
+            <button type="submit"><i class="fas fa-search"></i> Search</button>
+        </form>
+    </div>
+
+    <!-- User List Table -->
+    <table>
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>First Name</th>
+                <th>Last Name</th>
+                <th>RollNo</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            <?php if (count($users) > 0): ?>
+                <?php foreach ($users as $user): ?>
+                    <tr>
+                        <td><?php echo htmlspecialchars($user['ID']); ?></td>
+                        <td><?php echo htmlspecialchars($user['FirstName']); ?></td>
+                        <td><?php echo htmlspecialchars($user['LastName']); ?></td>
+                        <td><?php echo htmlspecialchars($user['RollNo']); ?></td>
+                        <td class="actions-column">
+                            <a href="../Views/edit1.php?action=edit1&id=<?php echo $user['ID']; ?>" class="action-link">Edit</a> |
+                            <a href="../Controllers/User1Controller.php?action=delete1&id=<?php echo $user['ID']; ?>" class="action-link" onclick="return confirm('Are you sure you want to delete this user?');">Delete</a>
+                        </td>
+                    </tr>
+                <?php endforeach; ?>
+            <?php else: ?>
+                <tr>
+                    <td colspan="5">No users found.</td>
+                </tr>
+            <?php endif; ?>
+        </tbody>
+    </table>
+
+    <!-- Pagination -->
+    <div class="pagination">
+        <?php if ($page > 1): ?>
+            <a href="?page=<?php echo $page - 1; ?>&search=<?php echo htmlspecialchars($search); ?>">Previous</a>
+        <?php endif; ?>
+
+        <?php for ($i = 1; $i <= $total_pages; $i++): ?>
+            <a href="?page=<?php echo $i; ?>&search=<?php echo htmlspecialchars($search); ?>" <?php if ($i == $page) echo 'style="font-weight: bold;"'; ?>>
+                <?php echo $i; ?>
+            </a>
+        <?php endfor; ?>
+
+        <?php if ($page < $total_pages): ?>
+            <a href="?page=<?php echo $page + 1; ?>&search=<?php echo htmlspecialchars($search); ?>">Next</a>
+        <?php endif; ?>
+    </div>
+
+    <!-- CSV Upload Section -->
+    <div class="csv-upload">
+        <h3>Import Users via CSV</h3>
+        <form action="../Controllers/User1Controller.php?action=importCsv" method="POST" enctype="multipart/form-data">
+            <input type="file" name="csv_file" accept=".csv" required>
+            <button type="submit">Import CSV</button>
+        </form>
+        
+        <h3>Download Sample CSV</h3>
+        <a href="sample_users.csv" download>Click to download the sample CSV format</a>
+    </div>
+
+    <!-- Logout Button -->
+    <!-- <div class="logout-btn">
+        <form action="../../public/login.php" method="POST">
+            <button type="submit">Logout</button>
+        </form>
+    </div> -->
+
+    <div class="logout-btn">
+    <form action="logout.php" method="POST">
+        <button type="submit">Logout</button>
+    </form>
+</div>
+
+</div>
+
+</body>
+</html>
+
+//Sixth
+
+The error occurs because PHP cannot find the LoginController.php file at the specified path in the require_once statement. This is likely due to a directory structure mismatch. To resolve this:
+
+1. Check Directory Structure: Make sure that LoginController.php is actually located in ../app/Controllers/ relative to index.php. If it isn’t, adjust the path in index.php.
+
+
+2. Use __DIR__ for Path Consistency: Using __DIR__ ensures paths are correctly relative to the current file's location. This makes paths less error-prone, especially in nested directories.
+
+
+
+Here's an updated version of index.php with __DIR__:
+
+<?php
+
+require_once __DIR__ . '/../app/Controllers/LoginController.php';
+
+$controllerName = $_GET['controller'] ?? 'login';
+$action = $_GET['action'] ?? 'showLoginForm';
+
+$controller = null;
+
+if ($controllerName === 'login') {
+    $controller = new LoginController();
+}
+
+if ($controller && method_exists($controller, $action)) {
+    $controller->$action();
+} else {
+    echo "404 - Page Not Found";
+}
+
+?>
+
+And make sure the path to Admin.php in LoginController.php also uses __DIR__:
+
+<?php
+require_once __DIR__ . '/../Models/Admin.php';
+
+class LoginController {
+    public function showLoginForm($error = null) {
+        require_once __DIR__ . '/../Views/login.php';
+    }
+
+    public function login() {
+        session_start();
+        
+        $username = $_POST['UserName'];
+        $password = $_POST['Password'];
+        $invalid = 0;
+
+        if ($username === Admin::USERNAME && $password === Admin::PASSWORD) {
+            $_SESSION['is_logged_in'] = true;
+            header('Location: ../app/Views/user_list.php');
+            exit();
+        } else {
+            $invalid = 1;
+            $this->showLoginForm($invalid);
+        }
+    }
+
+    public function logout() {
+        session_start();
+        session_unset();
+        session_destroy();
+        header('Location: ../public/index.php');
+    }
+}
+
+//Seventh
+
+
+
+To handle duplicate roll numbers when creating a new user or importing a CSV file, we need to modify the User1Controller.php and User1.php files to check if the roll number already exists before attempting to insert a new user. Here’s how you can modify the code:
+
+Updated User1Controller.php
+
+In the createUser and importCsv functions, add a check to see if the roll number already exists using the rollNoExists method.
+
+class User1Controller {
+    private $user1Model;
+
+    public function __construct() {
+        $this->user1Model = new User1();
+        session_start();
+    }
+
+    public function createUser($userData) {
+        if ($this->user1Model->rollNoExists($userData['RollNo'])) {
+            echo "Error: Roll number already exists!";
+            return;
+        }
+        $this->user1Model->create1($userData['FirstName'], $userData['LastName'], $userData['RollNo']);
+        header('Location: ../Views/user_list1.php');
+    }
+
+    public function importCsv() {
+        if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_FILES['csv_file'])) {
+            $file = $_FILES['csv_file'];
+
+            if ($file['error'] == 0) {
+                $fileName = $file['tmp_name'];
+                $handle = fopen($fileName, 'r');
+
+                // Skip the header row
+                fgetcsv($handle);
+
+                // Read and insert the data
+                while (($data = fgetcsv($handle)) !== false) {
+                    $firstName = $data[0];
+                    $lastName = $data[1];
+                    $rollNo = $data[2];
+
+                    // Check if roll number already exists
+                    if ($this->user1Model->rollNoExists($rollNo)) {
+                        echo "Error: Roll number $rollNo already exists!";
+                        continue;
+                    }
+
+                    // Insert data if roll number does not exist
+                    $this->user1Model->create1($firstName, $lastName, $rollNo);
+                }
+
+                fclose($handle);
+                header('Location: ../Views/user_list1.php');
+            } else {
+                echo "Error uploading the file.";
+            }
+        }
+    }
+
+    // Other methods remain unchanged
+}
+
+Updated User1.php
+
+Make sure the rollNoExists method correctly checks for an existing roll number before any insertion attempt.
+
+class User1 {
+    private $conn;
+
+    public function __construct() {
+        $db = new Database("MVCStudent");
+        $this->conn = $db->conn;
+    }
+
+    public function create1($firstName, $lastName, $rollNo) {
+        $stmt = $this->conn->prepare("INSERT INTO Student (FirstName, LastName, RollNo) VALUES (?, ?, ?)");
+        $stmt->bind_param("ssi", $firstName, $lastName, $rollNo);
+        return $stmt->execute();
+    }
+
+    public function rollNoExists($rollNo) {
+        $stmt = $this->conn->prepare("SELECT * FROM Student WHERE RollNo = ?");
+        $stmt->bind_param('i', $rollNo);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        return $result->num_rows > 0;
+    }
+
+    // Other methods remain unchanged
+}
+
+
+//Eighth
+
+Here's a simple PHP code in MVC that allows students with specific roll numbers to perform CRUD operations on assignments. In this setup:
+
+The AssignmentController handles the CRUD operations.
+
+The Assignment model manages database interactions.
+
+A specific student (filtered by roll number) can perform CRUD operations on their assignments.
+
+
+Here’s the code:
+
+
+---
+
+Folder Structure
+
+- app/
+  - Controllers/
+    - AssignmentController.php
+  - Models/
+    - Assignment.php
+  - Views/
+    - assignment_list.php
+    - create_assignment.php
+    - edit_assignment.php
+- public/
+  - index.php
+
+Step 1: Database Structure (MySQL)
+
+Create a table named assignments with the following columns:
+
+CREATE TABLE assignments (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    roll_no INT NOT NULL,
+    title VARCHAR(255) NOT NULL,
+    description TEXT,
+    due_date DATE
+);
+
+
+
+Step 2: Assignment Model (app/Models/Assignment.php)
+
+The model handles database interactions for assignments.
+
+<?php
+require_once __DIR__ . '/../../config/Database.php';
+
+class Assignment {
+    private $conn;
+
+    public function __construct() {
+        $db = new Database("MVCStudent");
+        $this->conn = $db->conn;
+    }
+
+    public function getAssignmentsByRollNo($rollNo) {
+        $stmt = $this->conn->prepare("SELECT * FROM assignments WHERE roll_no = ?");
+        $stmt->bind_param("i", $rollNo);
+        $stmt->execute();
+        return $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
+    }
+
+    public function createAssignment($rollNo, $title, $description, $dueDate) {
+        $stmt = $this->conn->prepare("INSERT INTO assignments (roll_no, title, description, due_date) VALUES (?, ?, ?, ?)");
+        $stmt->bind_param("isss", $rollNo, $title, $description, $dueDate);
+        return $stmt->execute();
+    }
+
+    public function updateAssignment($id, $title, $description, $dueDate) {
+        $stmt = $this->conn->prepare("UPDATE assignments SET title = ?, description = ?, due_date = ? WHERE id = ?");
+        $stmt->bind_param("sssi", $title, $description, $dueDate, $id);
+        return $stmt->execute();
+    }
+
+    public function deleteAssignment($id) {
+        $stmt = $this->conn->prepare("DELETE FROM assignments WHERE id = ?");
+        $stmt->bind_param("i", $id);
+        return $stmt->execute();
+    }
+
+    public function findAssignmentById($id) {
+        $stmt = $this->conn->prepare("SELECT * FROM assignments WHERE id = ?");
+        $stmt->bind_param("i", $id);
+        $stmt->execute();
+        return $stmt->get_result()->fetch_assoc();
+    }
+}
+?>
+
+Step 3: AssignmentController (app/Controllers/AssignmentController.php)
+
+The controller manages the logic and interaction with views and models.
+
+<?php
+require_once __DIR__ . '/../Models/Assignment.php';
+
+class AssignmentController {
+    private $assignmentModel;
+
+    public function __construct() {
+        $this->assignmentModel = new Assignment();
+    }
+
+    public function listAssignments($rollNo) {
+        $assignments = $this->assignmentModel->getAssignmentsByRollNo($rollNo);
+        require_once __DIR__ . '/../Views/assignment_list.php';
+    }
+
+    public function createAssignment($rollNo) {
+        if ($_SERVER['REQUEST_METHOD'] == 'POST') {
+            $title = $_POST['title'];
+            $description = $_POST['description'];
+            $dueDate = $_POST['due_date'];
+
+            $this->assignmentModel->createAssignment($rollNo, $title, $description, $dueDate);
+            header("Location: ../Views/assignment_list.php");
+            exit();
+        }
+        require_once __DIR__ . '/../Views/create_assignment.php';
+    }
+
+    public function editAssignment($id) {
+        if ($_SERVER['REQUEST_METHOD'] == 'POST') {
+            $title = $_POST['title'];
+            $description = $_POST['description'];
+            $dueDate = $_POST['due_date'];
+
+            $this->assignmentModel->updateAssignment($id, $title, $description, $dueDate);
+            header("Location: ../Views/assignment_list.php");
+            exit();
+        }
+        $assignment = $this->assignmentModel->findAssignmentById($id);
+        require_once __DIR__ . '/../Views/edit_assignment.php';
+    }
+
+    public function deleteAssignment($id) {
+        $this->assignmentModel->deleteAssignment($id);
+        header("Location: ../Views/assignment_list.php");
+    }
+}
+?>
+
+Step 4: Views
+
+1. Assignment List View (app/Views/assignment_list.php)
+
+Displays the assignments for the specific student.
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Assignments List</title>
+</head>
+<body>
+    <h1>Assignments List</h1>
+    <a href="?action=create">Create Assignment</a>
+    <ul>
+        <?php foreach ($assignments as $assignment): ?>
+            <li>
+                <strong><?php echo htmlspecialchars($assignment['title']); ?></strong><br>
+                <?php echo htmlspecialchars($assignment['description']); ?><br>
+                Due Date: <?php echo htmlspecialchars($assignment['due_date']); ?><br>
+                <a href="?action=edit&id=<?php echo $assignment['id']; ?>">Edit</a> |
+                <a href="?action=delete&id=<?php echo $assignment['id']; ?>">Delete</a>
+            </li>
+        <?php endforeach; ?>
+    </ul>
+</body>
+</html>
+
+2. Create Assignment View (app/Views/create_assignment.php)
+
+Form for creating a new assignment.
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Create Assignment</title>
+</head>
+<body>
+    <h1>Create Assignment</h1>
+    <form method="POST" action="">
+        <label>Title:</label>
+        <input type="text" name="title" required><br>
+        <label>Description:</label>
+        <textarea name="description" required></textarea><br>
+        <label>Due Date:</label>
+        <input type="date" name="due_date" required><br>
+        <button type="submit">Create</button>
+    </form>
+</body>
+</html>
+
+3. Edit Assignment View (app/Views/edit_assignment.php)
+
+Form for editing an assignment.
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Edit Assignment</title>
+</head>
+<body>
+    <h1>Edit Assignment</h1>
+    <form method="POST" action="">
+        <label>Title:</label>
+        <input type="text" name="title" value="<?php echo htmlspecialchars($assignment['title']); ?>" required><br>
+        <label>Description:</label>
+        <textarea name="description" required><?php echo htmlspecialchars($assignment['description']); ?></textarea><br>
+        <label>Due Date:</label>
+        <input type="date" name="due_date" value="<?php echo htmlspecialchars($assignment['due_date']); ?>" required><br>
+        <button type="submit">Update</button>
+    </form>
+</body>
+</html>
+
+Step 5: Routing (public/index.php)
+
+This file handles requests and routes them to the appropriate controller methods.
+
+<?php
+require_once __DIR__ . '/../app/Controllers/AssignmentController.php';
+
+$controller = new AssignmentController();
+$rollNo = 123; // Replace with actual roll number, perhaps from a logged-in user session
+
+if (isset($_GET['action'])) {
+    switch ($_GET['action']) {
+        case 'create':
+            $controller->createAssignment($rollNo);
+            break;
+        case 'edit':
+            $id = $_GET['id'];
+            $controller->editAssignment($id);
+            break;
+        case 'delete':
+            $id = $_GET['id'];
+            $controller->deleteAssignment($id);
+            break;
+        default:
+            $controller->listAssignments($rollNo);
+            break;
+    }
+} else {
+    $controller->listAssignments($rollNo);
+}
+?>
+
+
+//edit2.php
+
+<?php
+session_start();
+require_once __DIR__ . '/../Models/User1.php'; // Include the User model
+
+// Check if the user is logged in
+if (!isset($_SESSION['logged_in']) || $_SESSION['logged_in'] !== true) {
+    header("Location: ../../public/login.php");
+    exit();
+}
+
+$userObj = new User1();
+
+// Check if the 'id' parameter exists in the URL
+if (isset($_GET['action']) && $_GET['action'] === 'edit1' && isset($_GET['id'])) {
+    $id = $_GET['id'];  // Get the user ID from the URL
+
+    // Fetch user data from the database based on the user ID
+    $existingUser = $userObj->find1($id);
+
+    // Check if user data is retrieved
+    if (!$existingUser) {
+        echo "User not found.";
+        exit();
+    }
+} else {
+    echo "No user ID provided.";
+    exit();
+}
+?>
+
+
+
+
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Edit User</title>
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body onload="validateAllFields()">
+    <div class="container">
+        <div class="form-container">
+            <h2 class="text-center">Edit Students</h2>
+            <form action="../Controllers/AssignmentController.php?action=edit2&id=<?php echo $id; ?>" method="POST" enctype="multipart/form-data" autocomplete="off" id="editUserForm">
+
+                <!-- Hidden input for ID -->
+                <input type="hidden" name="ID" value="<?php echo $existingUser['ID']; ?>">
+
+                <div class="form-group">
+                    <label for="FirstName">FirstName:</label>
+                    <input type="text" class="form-control" id="FirstName" name="FirstName" 
+                           value="<?php echo htmlspecialchars($existingUser['FirstName']); ?>" 
+                           required autocomplete="off" oninput="validateFirstName()">
+                    <div id="first-name-error" class="error-message"></div>
+                </div>
+
+                <div class="form-group">
+                    <label for="LastName">LastName:</label>
+                    <input type="text" class="form-control" id="LastName" name="LastName" 
+                    value="<?php echo htmlspecialchars($existingUser['LastName']); ?>" 
+                           required autocomplete="off" oninput="validateLastName()">
+                    <div id="last-name-error" class="error-message"></div>
+                </div>
+
+                <div class="form-group">
+                    <label for="RollNo">RollNo:</label>
+                    <input type="text" class="form-control" id="RollNo" name="RollNo" 
+                    value="<?php echo htmlspecialchars($existingUser['RollNo']); ?>" 
+                           required autocomplete="off" oninput="validateRollNo()">
+                    <div id="roll-no-error" class="error-message"></div>
+                </div>
+
+                <div class="form-group">
+                    <button type="submit" name="submit" class="btn btn-primary btn-block" id="submitBtn" disabled>Update User</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        // Client-side validation for Username, Password, and Confirm Password
+        function validateFirstName() {
+            const firstname = document.getElementById('FirstName').value;
+            if (firstname === '') {
+                document.getElementById('first-name-error').textContent = 'FirstName is required';
+            } else {
+                document.getElementById('first-name-error').textContent = '';
+            }
+            checkSubmitButton();
+        }
+
+        function validateLastName() {
+            const lastname = document.getElementById('LastName').value;
+            if (lastname.length === '') {
+                document.getElementById('last-name-error').textContent = 'LastName is required';
+            } else {
+                document.getElementById('last-name-error').textContent = '';
+            }
+            checkSubmitButton();
+        }
+
+        function validateRollNo() {
+    var rollNoInput = document.getElementById('RollNo');
+    var rollNo = rollNoInput.value;
+
+    rollNo = rollNo.replace(/\D/g, ''); // Remove any non-digit characters
+    if (rollNo.length > 10) {
+        rollNo = rollNo.slice(0, 10); // Limit the input to the first 10 digits
+    }
+    rollNoInput.value = rollNo; // Update the input value to exclude extra digits
+
+    if (rollNo.length === 0) {
+        phoneError.innerHTML = 'Roll number is required';
+        phoneError.style.color = 'red';
+        phoneError.classList.remove('success');
+        phoneError.classList.add('error');
+        vPhone = false;
+    } else if (rollNo.length !== 10) {
+        phoneError.innerHTML = 'Roll number must be exactly 10 digits';
+        phoneError.style.color = 'red';
+        phoneError.classList.remove('success');
+        phoneError.classList.add('error');
+        vPhone = false;
+    } else {
+        phoneError.innerHTML = 'Valid Roll Number';
+        phoneError.style.color = 'green';
+        phoneError.classList.remove('error');
+        phoneError.classList.add('success');
+        vPhone = true;
+    }
+    checkSubmitButton();
+}
+
+        function checkSubmitButton() {
+            const firstname = document.getElementById('FirstName').value;
+            const lastname = document.getElementById('LastName').value;
+            const rollNo = document.getElementById('RollNo').value;
+
+            const submitBtn = document.getElementById('submitBtn');
+
+            // Enable the button only if all fields are filled 
+            submitBtn.disabled = !(firstname && lastname && rollNo );
+        }
+
+        // Run all validations on page load
+        function validateAllFields() {
+            validateFirstName();
+            validateLastName();
+            validateRollNo();
+        }
+    </script>
+</body>
+</html>
+
+assignment_list.php
+
+<?php
+session_start();
+require_once __DIR__ . '/../Controllers/AssignmentController.php';
+
+$rollNo = $_GET['rollNo'];
+$controller = new AssignmentController();
+$controller->listAssignments($rollNo);
+?>
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Assignment List</title>
+</head>
+<body>
+    <h1>Assignments for Roll No: <?php echo htmlspecialchars($rollNo); ?></h1>
+    <a href="create_assignment.php?rollNo=<?php echo $rollNo; ?>">Create Assignment</a>
+
+    <table>
+        <tr>
+            <th>Title</th>
+            <th>Description</th>
+            <th>Due Date</th>
+            <th>Actions</th>
+        </tr>
+        <?php foreach ($assignments as $assignment): ?>
+        <tr>
+            <td><?php echo htmlspecialchars($assignment['title']); ?></td>
+            <td><?php echo htmlspecialchars($assignment['description']); ?></td>
+            <td><?php echo htmlspecialchars($assignment['due_date']); ?></td>
+            <td>
+                <a href="edit_assignment.php?id=<?php echo $assignment['id']; ?>">Edit</a> |
+                <a href="../Controllers/AssignmentController.php?action=delete&id=<?php echo $assignment['id']; ?>&rollNo=<?php echo $rollNo; ?>" onclick="return confirm('Are you sure?');">Delete</a>
+            </td>
+        </tr>
+        <?php endforeach; ?>
+    </table>
+</body>
+</html>
+
+
+create_assignment.php
+
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Create Assignment</title>
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<div class="container">
+    <div class="form-container">
+        <h2 class="text-center">Create Assignment</h2>
+        <!-- <form action="../Controllers/User1Controller.php?action=create1" method="post" enctype="multipart/form-data" autocomplete="off"> -->
+        <form action="../Controllers/AssignmentController.php?action=create2" method="post" enctype="multipart/form-data" autocomplete="off">
+            <div class="form-group">
+                <label for="title">Title</label>
+                <input type="text" class="form-control" id="title" name="title" required>
+                <!-- <div id="first-name-error" class="error-message"></div> -->
+            </div>
+
+
+
+            <div class="form-group">
+                <label for="description">Description</label>
+                <input type="text" class="form-control" id="description" name="description" required>
+                <!-- <div id="last-name-error" class="error-message"></div> -->
+            </div>
+
+            <div class="form-group">
+                <label for="due_date">Due Date</label>
+                <input type="date" class="form-control" id="due_date" name="due_date" required>
+                <!-- <div id="roll-no-error" class="error-message"></div> -->
+            </div>
+
+
+            <button type="submit" name="submit" class="btn btn-primary w-100">Add Assignment</button>
+
+          
+        </form>
+    </div>
+</div>
+
+<script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@4.5.2/dist/js/bootstrap.bundle.min.js"></script>
+<script src="script.js" defer></script>
+<!-- <script>
+    // Call validateImage on page load to check the image validation state
+    window.onload = validateImage;
+</script> -->
+</body>
+</html> 
+
+
+
+edit_assignment.php
+
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Edit Assignment</title>
+</head>
+<body>
+    <h1>Edit Assignment</h1>
+    <form method="POST" action="">
+        <label>Title:</label>
+        <input type="text" name="title" value="<?php echo htmlspecialchars($assignment['title']); ?>" required><br>
+        <label>Description:</label>
+        <textarea name="description" required><?php echo htmlspecialchars($assignment['description']); ?></textarea><br>
+        <label>Due Date:</label>
+        <input type="date" name="due_date" value="<?php echo htmlspecialchars($assignment['due_date']); ?>" required><br>
+        <button type="submit">Update</button>
+    </form>
+</body>
+</html>
+
+
+//user_list1.php for checkbox deletion
+
+
+<?php
+
+// Start the session
+session_start();
+
+require_once __DIR__ . '/../Models/User1.php';
+
+// Check if the user is logged in; if not, redirect to login
+if (!isset($_SESSION['logged_in']) || $_SESSION['logged_in'] !== true) {
+    header("Location: ../../public/login.php");
+    exit();
+}
+
+$userObj = new User1();
+$users = $userObj->fetchUsers();
+
+// Handle search
+$search = '';
+if (isset($_GET['search'])) {
+    $search = $_GET['search'];
+}
+
+$limit = 5; 
+$page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
+$offset = ($page - 1) * $limit;
+
+$total_users = $userObj->countUsers($search);  // Total user count
+$total_pages = ceil($total_users / $limit);   // Total pages for pagination
+$users = $userObj->fetchUsers($search, $limit, $offset);  // Fetch the users based on search and pagination
+
+?>
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>User List</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <style>
+        /* General Styles */
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f7f8fa;
+            margin: 0;
+            padding: 40px;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background: #fff;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+        }
+
+        h2 {
+            text-align: center;
+            color: #333;
+            margin-bottom: 20px;
+            font-size: 28px;
+        }
+
+        /* Header Buttons */
+        .header-buttons {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 20px;
+        }
+
+        .header-buttons a {
+            padding: 10px 20px;
+            background-color: #007bff;
+            color: white;
+            text-decoration: none;
+            border-radius: 4px;
+        }
+
+        .header-buttons a:hover {
+            background-color: #0056b3;
+        }
+
+        /* Search Box and Filters */
+        .search-container {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+        }
+
+        .search-container input {
+            padding: 10px;
+            width: 70%;
+            border-radius: 4px;
+            border: 1px solid #ddd;
+            font-size: 16px;
+            margin-right: 10px;
+        }
+
+        .search-container button {
+            padding: 10px 15px;
+            background-color: #007bff;
+            color: #fff;
+            border: none;
+            border-radius: 4px;
+        }
+
+        /* Table Styles */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+        }
+
+        table, th, td {
+            border: 1px solid #ddd;
+        }
+
+        th, td {
+            padding: 10px;
+            text-align: left;
+        }
+
+        th {
+            background-color: #f2f2f2;
+        }
+
+        .btn {
+            padding: 5px 10px;
+            border-radius: 4px;
+            background-color: #28a745;
+            color: white;
+            border: none;
+        }
+
+        .btn-danger {
+            background-color: #dc3545;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>User List</h2>
+    
+    <div class="header-buttons">
+        <a href="create_user.php">Add New User</a>
+        <a href="assign_user.php">Assign</a> <!-- Make sure Assign button is here -->
+    </div>
+
+    <div class="search-container">
+        <form method="GET" action="user_list1.php">
+            <input type="text" name="search" placeholder="Search" value="<?php echo htmlspecialchars($search); ?>" />
+            <button type="submit">Search</button>
+        </form>
+    </div>
+
+    <form method="POST" action="delete_selected.php"> <!-- Form to delete selected users -->
+        <table>
+            <thead>
+                <tr>
+                    <th><input type="checkbox" id="selectAll" /></th>
+                    <th>First Name</th>
+                    <th>Last Name</th>
+                    <th>Roll No</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                <?php foreach ($users as $user): ?>
+                <tr>
+                    <td><input type="checkbox" name="delete_ids[]" value="<?php echo $user['ID']; ?>" /></td>
+                    <td><?php echo htmlspecialchars($user['FirstName']); ?></td>
+                    <td><?php echo htmlspecialchars($user['LastName']); ?></td>
+                    <td><?php echo htmlspecialchars($user['RollNo']); ?></td>
+                    <td>
+                        <a href="edit1.php?id=<?php echo $user['ID']; ?>" class="btn">Edit</a>
+                        <a href="delete1.php?id=<?php echo $user['ID']; ?>" class="btn btn-danger">Delete</a>
+                    </td>
+                </tr>
+                <?php endforeach; ?>
+            </tbody>
+        </table>
+
+        <div class="d-flex justify-content-between">
+            <button type="submit" class="btn btn-danger">Delete Selected</button>
+        </div>
+    </form>
+
+    <div class="pagination">
+        <?php for ($i = 1; $i <= $total_pages; $i++): ?>
+            <a href="user_list1.php?page=<?php echo $i; ?>&search=<?php echo urlencode($search); ?>"><?php echo $i; ?></a>
+        <?php endfor; ?>
+    </div>
+
+</div>
+
+<script>
+    // Select/Deselect All functionality
+    document.getElementById('selectAll').addEventListener('change', function() {
+        let checkboxes = document.querySelectorAll('input[name="delete_ids[]"]');
+        checkboxes.forEach(function(checkbox) {
+            checkbox.checked = document.getElementById('selectAll').checked;
+        });
+    });
+</script>
+
+</body>
+</html>
+
+
+// new
+
+
+To include error handling for incorrect CSV formats, you'll need to update the User1Controller.php to validate the CSV format before processing. Here's how you can modify the code to give an error message if the CSV file does not match the required table format.
+
+User1Controller.php
+
+Add the following code in User1Controller.php to handle CSV validation:
+
+<?php
+require_once __DIR__ . '/../Models/User1.php';
+
+// Check if this is the import CSV action
+if (isset($_GET['action']) && $_GET['action'] === 'importCsv') {
+    if (isset($_FILES['csv_file'])) {
+        $csvFile = $_FILES['csv_file']['tmp_name'];
+        $fileExtension = pathinfo($_FILES['csv_file']['name'], PATHINFO_EXTENSION);
+
+        // Check if file is a CSV
+        if ($fileExtension !== 'csv') {
+            $_SESSION['error'] = 'Please upload a CSV file.';
+            header("Location: ../Views/user_list1.php");
+            exit();
+        }
+
+        // Open the CSV file and validate headers
+        if (($handle = fopen($csvFile, "r")) !== FALSE) {
+            // Read the first row for headers
+            $header = fgetcsv($handle, 1000, ",");
+
+            // Define expected headers
+            $expectedHeaders = ['FirstName', 'LastName', 'RollNo'];
+            $mismatched = array_diff($expectedHeaders, $header);
+
+            // Check if headers match
+            if (!empty($mismatched)) {
+                $_SESSION['error'] = 'CSV headers do not match expected format.';
+                fclose($handle);
+                header("Location: ../Views/user_list1.php");
+                exit();
+            }
+
+            // Process rows (assume headers match)
+            while (($data = fgetcsv($handle, 1000, ",")) !== FALSE) {
+                $firstName = $data[0];
+                $lastName = $data[1];
+                $rollNo = (int)$data[2];
+
+                // Here you would call the create1 method to add each user
+                $userObj = new User1();
+                $userObj->create1($firstName, $lastName, $rollNo);
+            }
+
+            fclose($handle);
+            $_SESSION['success'] = 'CSV file uploaded and users imported successfully.';
+        } else {
+            $_SESSION['error'] = 'Failed to open the CSV file.';
+        }
+    } else {
+        $_SESSION['error'] = 'No file uploaded.';
+    }
+
+    header("Location: ../Views/user_list1.php");
+    exit();
+}
+?>
+
+user_list1.php
+
+Update user_list1.php to display error or success messages.
+
+<?php
+// Start the session
+session_start();
+
+require_once __DIR__ . '/../Models/User1.php';
+
+// Display error or success messages
+if (isset($_SESSION['error'])) {
+    echo "<div style='color: red; text-align: center;'>" . htmlspecialchars($_SESSION['error']) . "</div>";
+    unset($_SESSION['error']);
+}
+
+if (isset($_SESSION['success'])) {
+    echo "<div style='color: green; text-align: center;'>" . htmlspecialchars($_SESSION['success']) . "</div>";
+    unset($_SESSION['success']);
+}
+?>
